@@ -12,7 +12,8 @@ library(rethinking)
 # (1) and (3) correspond to the expression
 
 #2E4
-# 
+# Probability is an idea created by humans to somehow quantify how likely it is for the tossed globe to show water.
+# It is subjective, as it is based on the creator's believes.
 
 
 ##### MEDIUM
@@ -155,8 +156,8 @@ prior[11:20] <- 1
 #Ignoring birth data
 # P(A | test A) = P(A, test A) / P(test A)
 #               = 0.8 * spec(A) / ((0.8) * spec(A) + 0.35*spec(A))
-#               = 0.8 * 0.5 / (0.8 * 0.5 + 0.35 * 0.5)
+#               = 0.8 * 0.5 / (0.8 * 0.5 + 0.35 * 0.5) (*)
 
 #Taking birth data into account
 # P(A) = 0.045 / 0.125
-# Replace 0.5 in the formula above by the result of line 161
+# Replace 0.5 in formula (*) by the result of line 161
