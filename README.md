@@ -5,7 +5,7 @@ In our *Bayesian Beginners Book Club* we are currently reading [Statistical Reth
 Current status:
 
 - [x] Exercises Ch2
-- [ ] Exercises Ch3 (HARD exercises missing)
+- [x] Exercises Ch3
 - [ ] Exercises Ch4 (4E3, 4M8, 4H4, 4H6, 4H7, 4H8 missing)
 - [ ] Exercises Ch5 (5M5 missing, HARD exercises missing? Are these from version 1 of the book?)
 - [ ] Exercises Ch6
