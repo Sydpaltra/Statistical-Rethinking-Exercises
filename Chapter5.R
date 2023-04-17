@@ -1,11 +1,12 @@
 library(rethinking)
+library(dagitty)
 
 ##### EASY
 
 #5E1
 #(2) and (4) are multiple linear regression models
 
-#5E2g
+#5E2
 #animal_diversity_i ~ Normal(mu_i, sigma_i)
 #mu_i = intercept + alpha_i * latitude_i + beta_i * plant_div_i
 #We are controlling for "plant diversity" by including it as one of our predictors
@@ -60,7 +61,7 @@ library(rethinking)
 # Similar to the fire example : States and locals with many divorces also have more marriages
 # Reason? You're getting divorced to get married again!
 # I.e. people have the opportunity to get married more than once
-# In consequence, we'd need to introduce an additional variable telling us the rate of 2nd/3rd/4th marriage in state i
+# In consequence, we'd need to introduce an additional variable telling us the rate of 2nd/3rd/4th marriage in state i (or simple an indicator for remarriage)
 
 
 #5M4
@@ -70,9 +71,113 @@ library(rethinking)
 # using marriage rate, median age at marriage, and percent LDS population (possibly standardized). 
 # You may want to consider transformations of the raw percent LDS variable.
 
-#TODO!
+#5M5
 
 ##### HARD
+
+#5H1
+# In the divorce example, suppose the DAG is: M → A → D.
+# What are the implied conditional independencies of the graph? Are the data consistent with it?
+
+MAD_dag <- dagitty('dag{ M -> A -> D }')
+impliedConditionalIndependencies(MAD_dag)
+# Output: D _||_ M | A
+# Meaning: D and M are independent after conditioning on M
+# Recall model m5.3 -> This explores adding both marriage rate and age at marriage -> Model results let us infer that this is consitent with the data
+
+#5H2
+# Assuming that the DAG for the divorce example is indeed M → A → D,
+# fit a new model and use it to estimate the counterfactual effect of halving a State’s marriage rate M. 
+# Use the counterfactual example from the chapter (starting on page 140) as a template.
+
+data(WaffleDivorce)
+d <- list()
+d$A <- standardize( WaffleDivorce$MedianAgeMarriage )
+d$D <- standardize( WaffleDivorce$Divorce )
+d$M <- standardize( WaffleDivorce$Marriage )
+
+m5.3_A <- quap(
+    alist(
+      ## M -> A -> D #Tried to stick to the example on p 140, but I am not sure if this is correct?
+        D ~ dnorm( mu , sigma ),
+        mu <- a + bM*M + bA*A,
+        a ~ dnorm(0, 0.2),
+        bM ~ dnorm(0, 0.5),
+        bA ~ dnorm(0, 0.5),
+        sigma ~ dexp(1),
+      ## M -> A
+        A ~ dnorm(mu_A , sigma_A),
+        mu_A <- aA + bAA*M,
+        aA ~ dnorm(0, 0.2),
+        bAA ~ dnorm(0, 0.5),
+        sigma_A ~ dexp(1)
+) , data = d )
+
+M_seq <- seq(from = -2, to = 2, length.out = 30)
+
+# prep data
+sim_dat <- data.frame(M = M_seq)
+# simulate A and then D, using A_seq
+s <- sim(m5.3_A, data = sim_dat, vars = c("A", "D"))
+
+plot(sim_dat$M, colMeans(s$A), ylim = c(-2, 2), type = "l",
+    xlab = "manipulated M", ylab = "counterfactual A")
+shade(apply(s$A, 2, PI), sim_dat$M)
+mtext("Total counterfactual effect of M on A")
+
+#Not really sure if this second part is correct?
+plot(sim_dat$M, colMeans(s$D), ylim=c(-2, 2), type = "l",
+    xlab = "manipulated M", ylab = "counterfactual D")
+shade(apply(s$D, 2, PI), sim_dat$M)
+mtext("Total counterfactual effect of M on A on D")
+
+#5H3
+# Return to the milk energy model,
+#m5.7. Suppose that the true causal relationship among the variables is:
+# M -> K <- N && M -> N
+# Now compute the counterfactual effect on K of doubling M.
+# You will need to account for both the direct and indirect paths of causation.
+# Use the counterfactual example from the chapter (starting on page 140) as a template
+
+data(milk)
+milk <- milk %>% mutate(log_mass = log(mass))
+d <- list()
+# Recall K = standardized kilocalories; M = mass, N = neocortex.perc
+
+d$K <- standardize(milk$kcal.per.g)
+d$M <- standardize(milk$log_mass)
+d$N <- standardize(milk$neocortex.perc)
+
+m5H3_M <- quap(
+    alist(
+        ## M -> K <- N
+        K ~ dnorm(mu, sigma),
+        mu <- a + bM*M +bN*N,
+        a ~ dnorm(0, 0.2),
+        bM ~ dnorm(0, 0.5),
+        bN ~ dnorm(0, 0.5),
+        sigma ~ dexp(1),
+
+        ## M -> N
+        N ~ dnorm(mu_N, sigma_N),
+        mu_N <- aN + + bAN*M,
+        aN ~ dnorm(0, 0.2),
+        bAN ~ dnorm(0, 0.5),
+        sigma_N ~ dexp(1)
+    ), data = d
+)
+ 
+#5H4
+#Here is an open practice problem to engage your imagination.
+# In the divorce date, States in the southern United States have many of the highest divorce rates. 
+#Add the South indicator variable to the analysis.
+#First, draw one or more DAGs that represent your ideas for how Southern American culture might influence any of the other three variables (D, M or A). 
+#Then list the testable implications of your DAGs, if there are any, and fit one or more models to evaluate the implications. 
+#What do you think the influence of “Southerness” is?
+
+
+
+#THE FOLLOWING EXERCISES SOMEHOW GOT MIXED UP? THEY ARE NOT THE EXERCISES OF VERSION 2 OF THE BOOK?
 
 #5H1
 # Fit two bivariate Gaussian regressions, using map: (1) body weight as a linear function of territory size (area), 
